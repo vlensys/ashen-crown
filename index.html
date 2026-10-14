@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Ashen Crown</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<canvas id="gl"></canvas>
+<canvas id="overlay"></canvas>
+<div id="vignette"></div>
+<div id="hurt"></div>
+<div id="hud" hidden>
+  <div id="compass"></div>
+  <div id="bossbar" hidden><div class="bn"></div><div class="bb"><div class="bf"></div></div></div>
+  <div id="cross"></div>
+  <div id="prompt" hidden></div>
+  <div id="toasts"></div>
+  <div id="floats"></div>
+  <div id="banner"></div>
+  <div id="bars">
+    <div class="bar hp"><div id="hp-fill"></div><span id="hp-txt"></span></div>
+    <div class="bar st"><div id="st-fill"></div></div>
+    <div class="bar mp"><div id="mp-fill"></div></div>
+  </div>
+  <div id="lvlbox"><span id="lvl">1</span></div>
+  <div id="xpbar"><div id="xp-fill"></div></div>
+  <div id="hud-info"></div>
+</div>
+<div id="modal" hidden></div>
+<div id="screen" hidden></div>
+<div id="fade"></div>
+<pre id="crash" hidden></pre>
+
+<script src="js/core.js"></script>
+<script src="js/gfx/gl.js"></script>
+<script src="js/gfx/textures.js"></script>
+<script src="js/data/items.js"></script>
+<script src="js/data/actors.js"></script>
+<script src="js/data/towns.js"></script>
+<script src="js/data/quests.js"></script>
+<script src="js/world/overworld.js"></script>
+<script src="js/world/towns.js"></script>
+<script src="js/world/dungeon.js"></script>
+<script src="js/game/player.js"></script>
+<script src="js/game/quests.js"></script>
+<script src="js/game/scene.js"></script>
+<script src="js/game/combat.js"></script>
+<script src="js/game/view.js"></script>
+<script src="js/game/save.js"></script>
+<script src="js/game/audio.js"></script>
+<script src="js/ui/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
