@@ -20,6 +20,8 @@
       case 'axe': p.line(4, 14, 11, 4, '#6a4a2a'); L(9, 2, 5, 5); break;
       case 'mace': p.line(4, 14, 10, 6, '#6a4a2a'); L(9, 2, 5, 5); break;
       case 'staff': p.line(3, 15, 12, 4, '#6a4a2a'); L(11, 1, 4, 4); break;
+      case 'bow': for (let y = 1; y < 15; y++) p.set(4 + Math.round(Math.sin(y / 14 * Math.PI) * 6), y, c); p.line(4, 1, 4, 14, '#d8d0b8'); break;
+      case 'ammo': for (let k = 0; k < 3; k++) { p.line(3 + k * 3, 14, 10 + k * 3, 3, '#8a6a3a'); p.set(10 + k * 3, 3, '#a0a0a8'); } break;
       case 'head': L(4, 4, 8, 7); L(4, 10, 8, 2, '#222'); break;
       case 'chest': L(3, 3, 10, 11); L(6, 3, 4, 2, '#222'); break;
       case 'hands': L(4, 4, 6, 8); L(10, 6, 2, 4); break;
@@ -60,7 +62,7 @@
     const now = performance.now();
     if (now - lastHud > 150) {
       lastHud = now;
-      $('hud-info').innerHTML = esc(st.weapon.name) + ' &nbsp;·&nbsp; ' + (p.spell ? esc(G.SPELLS[p.spell].name) + ' (' + G.SPELLS[p.spell].mana + ')' : 'no spell') + ' &nbsp;·&nbsp; ' + G.time.str() + (p.pts ? ' &nbsp;·&nbsp; <b>' + p.pts + ' points to spend (C)</b>' : '');
+      $('hud-info').innerHTML = esc(st.weapon.name) + (st.weapon.wtype === 'bow' ? ' (' + G.player.count('arrows') + ' arrows)' : '') + ' &nbsp;·&nbsp; ' + (p.spell ? esc(G.SPELLS[p.spell].name) + ' (' + G.SPELLS[p.spell].mana + ')' : 'no spell') + ' &nbsp;·&nbsp; ' + G.time.str() + (p.pts ? ' &nbsp;·&nbsp; <b>' + p.pts + ' points to spend (C)</b>' : '');
       $('xp-fill').style.width = (p.xp / G.player.xpNext(p.lvl) * 100).toFixed(1) + '%';
       $('lvl').textContent = p.lvl;
       U.compass();
@@ -87,8 +89,8 @@
     }
     for (const t of G.quests.targets()) {
       let x = t.x, z = t.z;
-      if (G.scene.kind === 'dungeon') {
-        if (t.dungeon !== G.scene.dungeonId) continue;
+      if (G.scene.grid) {
+        if (!G.scene.dungeonId || t.dungeon !== G.scene.dungeonId) continue;
         x = G.scene.L.boss.x; z = G.scene.L.boss.z;
       }
       add(angTo(x, z), '◆', t.main ? 'quest main' : 'quest');
@@ -131,7 +133,8 @@
     else if (t.type === 'corpse') txt = 'Search <b>' + esc(t.e.def.name) + '</b>';
     else if (t.type === 'chest') txt = 'Open <b>chest</b>';
     else if (t.type === 'door') { const d = G.world.dungeons.find((x) => x.id === t.it.dungeon); txt = 'Enter <b>' + esc(d.name) + '</b> <i>(level ' + d.lvl + ')</i>'; }
-    else if (t.type === 'exit') txt = 'Leave';
+    else if (t.type === 'exit') txt = t.it.house ? 'Go outside' : 'Leave';
+    else if (t.type === 'house') { const b = t.it.building, L = G.world.towns.find((x) => x.t.id === t.it.town); txt = 'Enter <b>' + esc(G.interior.name(L, b)) + '</b>' + (b.inside ? ' <i>(' + esc(G.NPCS[b.inside].name) + ')</i>' : ''); }
     else if (t.type === 'ore') txt = 'Mine <b>iron vein</b>';
     else if (t.type === 'plant') txt = 'Pick <b>' + (t.it.plant.kind === 'lotus' ? 'marsh lotus' : 'nightshade') + '</b>';
     else if (t.type === 'sign') txt = 'Read <b>signpost</b>';
@@ -147,6 +150,7 @@
     if (t.type === 'corpse') return U.loot(t.e.def.name, t.e.loot, () => { t.e.looted = true; });
     if (t.type === 'sack') return U.loot('Sack', t.it.items, () => { s.interact.splice(s.interact.indexOf(t.it), 1); S.ow.sacks = S.ow.sacks.filter((x) => x !== t.it.save); });
     if (t.type === 'door') return G.sc.enter(t.it.dungeon);
+    if (t.type === 'house') return G.sc.enterHouse(t.it.town, t.it.bi);
     if (t.type === 'exit') return G.sc.leave();
     if (t.type === 'sign') return U.open('sign', { title: t.it.text, text: t.it.desc });
     if (t.type === 'ore') { t.it.mined = true; S.dstate[s.dungeonId].ores[t.it.ore.id] = 1; G.player.give('iron_ore', 1); G.audio && G.audio.play('hit'); return; }
@@ -352,6 +356,7 @@
   U.itemInfo = function (id) {
     const d = G.item(id);
     const bits = [];
+    if (d.wtype === 'bow') bits.push('Ranged, uses arrows · scales with Finesse');
     if (d.type === 'weapon') bits.push('Damage ' + d.dmg[0] + '-' + d.dmg[1], 'Speed ' + (1 / d.speed).toFixed(1) + '/s', 'Reach ' + d.reach + (d.twoHand ? ' · two-handed' : ''), d.undead ? 'Smites undead' : '', d.spell ? '+' + Math.round(d.spell * 100) + '% spell power' : '', d.fire ? '+' + d.fire + ' fire' : '');
     if (d.type === 'armor') bits.push('Armour ' + d.armor, d.slot, d.mana ? '+' + d.mana + ' mana' : '');
     if (d.heal) bits.push('Restores ' + d.heal + ' health');
@@ -397,7 +402,7 @@
   };
   U.rInv = function (m) {
     const p = P();
-    const order = { weapon: 0, armor: 1, potion: 2, food: 3, tome: 4, misc: 5, quest: 6 };
+    const order = { weapon: 0, ammo: 0.5, armor: 1, potion: 2, food: 3, tome: 4, misc: 5, quest: 6 };
     const idx = p.inv.map((s, i) => i).sort((a, b) => order[G.item(p.inv[a].id).type] - order[G.item(p.inv[b].id).type] || G.item(p.inv[a].id).name.localeCompare(G.item(p.inv[b].id).name));
     m.invOrder = idx;
     m.sel = G.clamp(m.sel, 0, Math.max(0, idx.length - 1));
@@ -454,15 +459,15 @@
   U.drawMap = function (cv) {
     const g = cv.getContext('2d'), p = P(), W = G.world, m = U.modal;
     g.imageSmoothingEnabled = false;
-    if (G.scene.kind === 'dungeon') {
-      const L = G.scene.L, set = (G.sc.seen && G.sc.seen[G.scene.dungeonId]) || new Set();
+    if (G.scene.grid) {
+      const L = G.scene.L, set = (G.sc.seen && G.sc.seen[G.scene.levelId]) || new Set();
       const s = Math.floor(720 / L.w);
       g.fillStyle = '#0c0b0a'; g.fillRect(0, 0, 768, 768);
       for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) { if (!set.has(y * L.w + x)) continue; g.fillStyle = L.at(x, y) ? '#5a5248' : '#1e1b18'; g.fillRect(24 + x * s, 24 + y * s, s, s); }
-      const C = G.dungeon.CELL;
+      const C = L.cell;
       g.fillStyle = '#d8c890'; g.fillRect(24 + L.exit.x / C * s - 4, 24 + L.exit.z / C * s - 4, 8, 8);
       U.arrow(g, 24 + p.x / C * s, 24 + p.z / C * s, p.yaw);
-      g.fillStyle = '#c8b890'; g.font = 'bold 18px Georgia'; g.fillText(G.scene.site.name, 24, 20);
+      g.fillStyle = '#c8b890'; g.font = 'bold 18px Georgia'; g.fillText(G.scene.site ? G.scene.site.name : G.scene.name, 24, 20);
       return;
     }
     if (!U.mapImage) {
@@ -534,6 +539,8 @@
       ['Import save code', () => U.open('text', { title: 'Paste a save code', text: '', ro: false })],
       ['Mouse sensitivity: ' + G.settings.sens.toFixed(1) + '  (←/→)', () => {}],
       ['Pixel size: ' + G.settings.scale + '  (←/→ when selected)', () => {}],
+      ['Volume: ' + Math.round((G.settings.vol == null ? 0.8 : G.settings.vol) * 100) + '%  (←/→)', () => {}],
+      ['Music: ' + (G.settings.music === false ? 'off' : 'on') + '  (Enter)', () => { G.settings.music = G.settings.music === false; G.audio.setVolume(); G.saveSettings(); U.render(); }],
       ['Controls', () => U.open('text', { title: 'Controls', html: U.CONTROLS })],
       ['Quit to title', () => { G.save.auto(); location.reload(); }],
     ];
@@ -543,6 +550,7 @@
       if (!d) return false;
       if (m.sel === 5) G.settings.sens = G.clamp(G.settings.sens + d * 0.2, 0.2, 4);
       if (m.sel === 6) { G.settings.scale = G.clamp(G.settings.scale + d, 2, 6); G.gfx.resize(G.settings.scale); }
+      if (m.sel === 7) { G.settings.vol = G.clamp(Math.round(((G.settings.vol == null ? 0.8 : G.settings.vol) + d * 0.1) * 10) / 10, 0, 1); G.audio.setVolume(); }
       G.saveSettings(); U.render(); return true;
     };
     return '<div class="panel small"><div class="ptitle">The Ashen Crown</div><div class="list">' + items.map(([n], i) => '<div class="row btn ' + (i === m.sel ? 'sel' : '') + '" data-i="' + i + '"><span class="nm">' + esc(n) + '</span></div>').join('') + '</div><div class="foot">' + esc(P().name) + ' · ' + G.time.str() + '</div></div>';
@@ -558,7 +566,7 @@
     return '<div class="panel small"><div class="ptitle">' + esc(d.title) + '</div>' + (d.html ? '<div class="ctl">' + d.html + '</div>' : '<textarea id="codebox" ' + (d.ro ? 'readonly' : '') + '>' + esc(d.text) + '</textarea><div id="codeerr" class="err"></div>') +
       '<div class="foot">' + (d.ro ? 'Copy this code (Ctrl+C). Esc to close.' : d.html ? 'Esc to close' : 'Paste, then press the button. <button id="impbtn" data-i="0">Load</button>') + '</div></div>';
   };
-  U.CONTROLS = '<table>' + [['Move', 'W A S D'], ['Look', 'Mouse (click the game to capture it) or ← → ↑ ↓'], ['Sprint / Jump', 'Shift / Space'], ['Attack', 'Left click or F'], ['Block', 'Right mouse (hold) or B'], ['Cast readied spell', 'R'], ['Ready spell 1-5', '1 - 5'], ['Use / talk / loot', 'E'], ['Quick heal', 'Q'], ['Inventory · Character · Journal · Map', 'I · C · J · M'], ['Lantern (night)', 'L'], ['Pause / save', 'Esc']].map(([a, b]) => '<tr><td>' + a + '</td><td><kbd>' + b + '</kbd></td></tr>').join('') + '</table>';
+  U.CONTROLS = '<table>' + [['Move', 'W A S D'], ['Look', 'Mouse (click the game to capture it) or ← → ↑ ↓'], ['Sprint / Jump', 'Shift / Space'], ['Attack', 'Left click or F'], ['Block', 'Right mouse (hold) or B'], ['Cast readied spell', 'R'], ['Ready spell 1-5', '1 - 5'], ['Swap to previous weapon', 'Z'], ['Use / talk / loot', 'E'], ['Quick heal', 'Q'], ['Inventory · Character · Journal · Map', 'I · C · J · M'], ['Lantern (night)', 'L'], ['Pause / save', 'Esc']].map(([a, b]) => '<tr><td>' + a + '</td><td><kbd>' + b + '</kbd></td></tr>').join('') + '</table>';
   U.rSign = (m) => { m.items = []; return '<div class="panel small"><div class="ptitle">' + esc(m.data.title) + '</div><div class="ctl">' + esc(m.data.text) + '</div><div class="foot">Esc to close</div></div>'; };
   U.death = function () {
     setTimeout(() => U.open('death'), 900);

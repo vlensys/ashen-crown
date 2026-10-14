@@ -3,7 +3,7 @@
 (function (G) {
   const M = (G.main = {});
   const U = G.ui;
-  G.settings = Object.assign({ sens: 1, scale: 3, fov: 72, mute: false }, (() => { try { return JSON.parse(localStorage.getItem('ashencrown_settings')) || {}; } catch (e) { return {}; } })());
+  G.settings = Object.assign({ sens: 1, scale: 3, fov: 72, mute: false, vol: 0.8, music: true }, (() => { try { return JSON.parse(localStorage.getItem('ashencrown_settings')) || {}; } catch (e) { return {}; } })());
   G.saveSettings = () => { try { localStorage.setItem('ashencrown_settings', JSON.stringify(G.settings)); } catch (e) { /* ignore */ } };
 
   // ---------------- input ----------------
@@ -33,6 +33,7 @@
       case 'f': G.combat.attack(); break;
       case 'r': G.combat.cast(); break;
       case 'q': G.player.quickHeal(); break;
+      case 'z': G.player.swapWeapon(); break;
       case 'b': G.combat.blocking = true; break;
       case 'i': U.menu('inv'); break;
       case 'c': U.menu('char'); break;
@@ -85,6 +86,7 @@
         saveT += dt; if (saveT > 120 && !G.sc.inCombat()) { saveT = 0; G.save.auto(); }
       }
       if (U.modal && U.modal.kind === 'menu' && U.modal.tab === 'map') { const c = document.querySelector('#modal canvas'); if (c) U.drawMap(c); }
+      G.audio.update(U.modal ? 0 : dt, !U.modal && G.sc.moving, G.sc.speed || 0);
       G.gfx.resize(G.settings.scale);
       G.view.frame(dt);
       U.hud();
@@ -112,7 +114,8 @@
   };
   M.enterState = function () {
     const p = G.S.p;
-    if (p.scene !== 'overworld' && G.world.dungeons.some((d) => d.id === p.scene)) G.sc.loadDungeon(p.scene);
+    if (typeof p.scene === 'string' && p.scene.startsWith('in:')) { const [, town, bi] = p.scene.split(':'); try { G.sc.loadInterior(town, +bi); } catch (e) { G.sc.loadOverworld(p.ret ? p.ret.x : p.x, p.ret ? p.ret.z : p.z, 0); } }
+    else if (p.scene !== 'overworld' && G.world.dungeons.some((d) => d.id === p.scene)) G.sc.loadDungeon(p.scene);
     else G.sc.loadOverworld(p.x, p.z, p.yaw);
     G.view.lantern = true;
     G.quests.refresh();
@@ -170,6 +173,7 @@
       if (q.has('time')) G.S.time = +q.get('time') * 60;
       const ui = q.get('ui');
       if (ui === 'talk') { const e = G.scene.ents.find((e) => e.npc && e.npc.id === 'elder_maren'); U.talk(e); }
+      else if (ui === 'house') { const L = G.world.towns.find((t) => t.t.id === (q.get('town') || 'ravenhold')); const bi = L.buildings.findIndex((b) => b.role === (q.get('role') || 'inn')); G.sc.loadInterior(L.t.id, Math.max(0, bi)); }
       else if (ui) U.menu(ui);
       return;
     }

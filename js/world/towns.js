@@ -56,6 +56,14 @@
       if (n.role === 'scholar') { b.wall = 'brick_dark'; b.h += 3; }
       L.posts[n.id] = doorSpot(b, 2.2);
     }
+    // every house can be entered; shopkeepers, innkeepers, priests and scholars live inside
+    L.inside = new Set();
+    L.buildings.forEach((b, bi) => {
+      const ds = doorSpot(b, 1.0);
+      if (b.owner && ['shop', 'inn', 'temple', 'scholar'].includes(b.role)) L.inside.add(b.owner);
+      b.inside = b.owner && L.inside.has(b.owner) ? b.owner : null;
+      W.interact.push({ kind: 'house', x: ds.x, z: ds.z, r: 1.6, town: t.id, bi, building: b });
+    });
     // keep
     if (t.keep) {
       const kx0 = cx - 14, kz0 = cz - R + 6, kx1 = cx + 14, kz1 = kz0 + 20;

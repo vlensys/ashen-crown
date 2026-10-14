@@ -7,7 +7,7 @@
     warrior: { name: 'Sellsword', desc: 'Strong arm, thick hide. Starts with sword and shield.', attr: { might: 6, finesse: 3, arcana: 1 },
       items: [['iron_sword', 1], ['iron_shield', 1], ['leather_chest', 1], ['leather_feet', 1], ['potion_minor', 3], ['bread', 2]], equip: ['iron_sword', 'iron_shield', 'leather_chest', 'leather_feet'], spells: ['heal'] },
     rogue: { name: 'Cutpurse', desc: 'Quick, precise, deadly crits. Starts with a dagger and full leathers.', attr: { might: 3, finesse: 7, arcana: 2 },
-      items: [['iron_dagger', 1], ['leather_head', 1], ['leather_chest', 1], ['leather_hands', 1], ['leather_feet', 1], ['potion_minor', 3], ['potion_stamina', 1], ['apple', 3]], equip: ['iron_dagger', 'leather_head', 'leather_chest', 'leather_hands', 'leather_feet'], spells: ['heal'] },
+      items: [['iron_dagger', 1], ['hunting_bow', 1], ['arrows', 40], ['leather_head', 1], ['leather_chest', 1], ['leather_hands', 1], ['leather_feet', 1], ['potion_minor', 3], ['potion_stamina', 1], ['apple', 3]], equip: ['iron_dagger', 'leather_head', 'leather_chest', 'leather_hands', 'leather_feet'], spells: ['heal'] },
     mage: { name: 'Hedge Mage', desc: 'Frail but deadly at range. Starts with a staff and Firebolt.', attr: { might: 1, finesse: 3, arcana: 7 },
       items: [['oak_staff', 1], ['leather_feet', 1], ['potion_mana', 2], ['potion_minor', 2], ['cheese', 2]], equip: ['oak_staff', 'leather_feet'], spells: ['firebolt', 'heal'] },
   };
@@ -68,7 +68,7 @@
   P.give = function (id, n, quiet) {
     n = n || 1;
     const p = G.S.p;
-    if (id === 'gold') { p.gold += n; if (!quiet) G.ui.float('+' + n + ' gold', '#e0c050'); return; }
+    if (id === 'gold') { p.gold += n; if (!quiet) { G.ui.float('+' + n + ' gold', '#e0c050'); G.audio && G.audio.play('coin'); } return; }
     G.item(id);
     const e = p.inv.find((s) => s.id === id);
     if (e) e.n += n; else p.inv.push({ id, n });
@@ -94,6 +94,7 @@
     let slot = d.type === 'weapon' ? 'weapon' : d.slot;
     if (!slot) return;
     if (p.equip[slot] === id) { delete p.equip[slot]; return; }
+    if (slot === 'weapon' && p.equip.weapon) p.prevWeapon = p.equip.weapon;
     p.equip[slot] = id;
     if (slot === 'weapon' && d.twoHand) delete p.equip.shield;
     if (slot === 'shield' && p.equip.weapon && G.item(p.equip.weapon).twoHand) delete p.equip.weapon;
@@ -111,6 +112,7 @@
       G.audio && G.audio.play('drink');
       return;
     }
+    if (d.type === 'ammo') { G.ui.toast('Arrows are used automatically when you shoot a bow.'); return; }
     if (d.type === 'tome') {
       if (p.spells.includes(d.spell)) { G.ui.toast('You already know ' + G.SPELLS[d.spell].name + '.'); return; }
       p.spells.push(d.spell);
@@ -119,6 +121,11 @@
       return;
     }
     G.ui.toast('You can\'t use that.');
+  };
+  P.swapWeapon = function () {
+    const p = G.S.p;
+    if (!p.prevWeapon || !P.count(p.prevWeapon)) { G.ui.toast('No other weapon to swap to.'); return; }
+    P.equip(p.prevWeapon);
   };
   P.quickHeal = function () {
     const order = ['potion_minor', 'potion_heal', 'potion_greater', 'venison', 'cheese', 'bread', 'apple'];

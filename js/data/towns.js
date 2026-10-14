@@ -57,8 +57,8 @@
   npc('thornwick_inn', 'thornwick', 'Innkeep Ruda', 'inn', H({ robe: true, robeColor: '#3a4a3a', top: '#3a4a3a', hair: '#8a6a3a', hairStyle: 2 }), { shop: 'inn', title: 'The Felled Pine' });
 
   G.SHOPS = {
-    general: { name: 'General Goods', stock: ['bread', 'cheese', 'apple', 'ale', 'potion_minor', 'potion_stamina', 'lockpick', 'leather_chest', 'leather_head', 'leather_feet', 'leather_hands', 'iron_dagger', 'rusty_sword'], buys: 'all' },
-    smith: { name: 'Smithy', stock: ['iron_dagger', 'iron_sword', 'iron_axe', 'iron_mace', 'iron_greatsword', 'steel_sword', 'steel_axe', 'steel_mace', 'iron_head', 'iron_chest', 'iron_hands', 'iron_feet', 'iron_shield', 'steel_chest', 'steel_shield', 'steel_head'], buys: ['weapon', 'armor'] },
+    general: { name: 'General Goods', stock: ['bread', 'cheese', 'apple', 'ale', 'potion_minor', 'potion_stamina', 'lockpick', 'leather_chest', 'leather_head', 'leather_feet', 'leather_hands', 'iron_dagger', 'rusty_sword', 'hunting_bow', 'arrows'], buys: 'all' },
+    smith: { name: 'Smithy', stock: ['iron_dagger', 'iron_sword', 'iron_axe', 'iron_mace', 'iron_greatsword', 'steel_sword', 'steel_axe', 'steel_mace', 'iron_head', 'iron_chest', 'iron_hands', 'iron_feet', 'iron_shield', 'steel_chest', 'steel_shield', 'steel_head', 'yew_longbow', 'recurve_bow', 'arrows'], buys: ['weapon', 'armor', 'ammo'] },
     alchemist: { name: 'Apothecary', stock: ['potion_minor', 'potion_heal', 'potion_stamina', 'potion_mana', 'antidote', 'potion_greater'], buys: ['potion', 'misc', 'food'] },
     temple: { name: 'Temple', stock: ['potion_heal', 'tome_heal', 'tome_ward', 'potion_mana'], buys: ['misc', 'tome'], heal: true },
     mage: { name: 'Arcanum', stock: ['tome_firebolt', 'tome_frost', 'tome_ward', 'tome_heal', 'tome_drain', 'oak_staff', 'runed_staff', 'potion_mana'], buys: ['tome', 'misc', 'weapon'] },

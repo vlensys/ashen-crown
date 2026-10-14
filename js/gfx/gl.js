@@ -34,7 +34,7 @@
         float a = clamp(1.0 - length(uLP[i].xyz - vW) / uLP[i].w, 0.0, 1.0);
         l += uLC[i] * a * a;
       }
-      l = floor(l * 12.0 + 0.5) / 12.0;
+      l = floor(l * 20.0 + 0.5) / 20.0;
     }
     vec3 c = t.rgb * l;
     if (m > 4.5) c = mix(c, vec3(1.0, 0.25, 0.2), 0.6); // hurt flash

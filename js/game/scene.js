@@ -18,6 +18,7 @@
     for (const L of W.towns) {
       for (const n of Object.values(G.NPCS).filter((n) => n.town === L.t.id)) {
         const post = L.posts[n.id];
+        if (L.inside.has(n.id)) continue;
         if (post) s.ents.push(SC.makeNpc(n.spec, post.x, post.z, { npc: n, wander: post.wander || 0.8 }));
       }
       const r = G.rng(G.hashStr(L.t.id) + 5);
@@ -45,7 +46,7 @@
     p.ret = { x: site.door.x, z: site.door.z, yaw: Math.atan2(site.door.x - site.x, -(site.door.z - site.z)) };
     p.scene = dId;
     const ds = (G.S.dstate[dId] = G.S.dstate[dId] || { killed: {}, looted: {}, ores: {}, seen: '' });
-    const s = { kind: 'dungeon', dungeonId: dId, site, L, meshes: D.buildMeshes(L), ents: [], projs: [], parts: [], sacks: [], lights: L.lights, interact: [] };
+    const s = { kind: 'dungeon', grid: true, levelId: dId, dungeonId: dId, site, L, meshes: D.buildMeshes(L), ents: [], projs: [], parts: [], sacks: [], lights: L.lights, interact: [] };
     G.scene = s;
     for (const sp of L.spawns) {
       if (ds.killed[sp.id] && !(sp.boss && G.quests.needsBoss(dId))) continue;
@@ -59,10 +60,27 @@
     G.ui.banner(site.name, 'Level ' + site.lvl + ' ' + { cave: 'cave', fort: 'fortress', crypt: 'crypt', spire: 'stronghold' }[site.kind]);
     G.save.auto();
   };
+  SC.loadInterior = function (townId, bi) {
+    const L0 = W.towns.find((t) => t.t.id === townId), b = L0.buildings[bi];
+    const Lv = G.interior.generate(L0, bi);
+    const p = G.S.p, ds = W.doorSpot(b, 1.7);
+    p.ret = { x: ds.x, z: ds.z, yaw: { S: Math.PI, N: 0, W: -Math.PI / 2, E: Math.PI / 2 }[b.face] };
+    const id = 'in:' + townId + ':' + bi;
+    const s = { kind: 'interior', grid: true, levelId: id, name: Lv.name, L: Lv, meshes: D.buildMeshes(Lv), ents: [], projs: [], parts: [], sacks: [], lights: Lv.lights, interact: [] };
+    G.scene = s;
+    for (const pp of Lv.people) s.ents.push(SC.makeNpc(pp.npc ? pp.npc.spec : pp.sprite, pp.x, pp.z, { npc: pp.npc || null, name: pp.name, wander: pp.npc ? 0.6 : 0.3 }));
+    for (const c of Lv.chests) s.interact.push({ kind: 'chest', x: c.x, z: c.z, r: 1.2, chest: c, looted: !!G.S.ow.chests[c.id] });
+    s.interact.push({ kind: 'exit', x: Lv.exit.x - Lv.exit.dx * 0.8, z: Lv.exit.z - Lv.exit.dy * 0.8, r: 1.6, house: true });
+    p.scene = id; p.x = Lv.start.x; p.z = Lv.start.z; p.y = 0; p.yaw = Lv.startYaw;
+    G.ui.toast(Lv.name);
+  };
+  SC.enterHouse = function (townId, bi) { G.audio.play('door'); G.ui.fade(() => { SC.loadInterior(townId, bi); G.save.auto(); }); };
   SC.enter = function (dId) {
+    G.audio.play('door');
     G.ui.fade(() => SC.loadDungeon(dId));
   };
   SC.leave = function () {
+    G.audio.play('door');
     const r = G.S.p.ret;
     G.ui.fade(() => { SC.loadOverworld(r.x, r.z, r.yaw); G.save.auto(); });
   };
@@ -76,14 +94,14 @@
     return Object.assign({ kind: 'mob', def, sprite: def.sprite, x, z, y: SC.groundAt(x, z), hx: x, hz: z, hp: sc.hp, max: sc.hp, dmg: sc.dmg, lvl: Math.max(def.lvl, lvl || 0),
       w: def.w, h: def.h, state: 'idle', t: Math.random() * 3, cd: 0, atk: 0, frame: 0, hurt: 0, slow: 0, tx: x, tz: z, path: 0 }, o);
   };
-  SC.groundAt = function (x, z) { return G.scene && G.scene.kind === 'dungeon' ? 0 : W.groundH(x, z); };
+  SC.groundAt = function (x, z) { return G.scene && G.scene.grid ? 0 : W.groundH(x, z); };
 
   // ======================= collision =======================
   // resolve a circle at (x,z) against the world; returns adjusted [x,z]
   SC.collide = function (x, z, r, oldX, oldZ) {
     const s = G.scene;
-    if (s.kind === 'dungeon') {
-      const L = s.L, C = D.CELL;
+    if (s.grid) {
+      const L = s.L, C = L.cell;
       for (let it = 0; it < 2; it++) {
         const cx = Math.floor(x / C), cz = Math.floor(z / C);
         for (let j = cz - 1; j <= cz + 1; j++) for (let i = cx - 1; i <= cx + 1; i++) {
@@ -121,12 +139,13 @@
   SC.moveEnt = function (e, dx, dz, r) {
     const [x, z] = SC.collide(e.x + dx, e.z + dz, r || 0.4, e.x, e.z);
     e.mvx = x - e.x; e.mvz = z - e.z;
+    if (Math.abs(e.mvx) + Math.abs(e.mvz) > 0.004) e.fy = Math.atan2(e.mvx, -e.mvz);
     e.x = x; e.z = z;
     e.y = SC.groundAt(x, z);
   };
   SC.los = function (x0, z0, x1, z1) {
     const s = G.scene;
-    if (s.kind === 'dungeon') return D.los(s.L, x0, z0, x1, z1);
+    if (s.grid) return D.los(s.L, x0, z0, x1, z1);
     const n = Math.ceil(Math.hypot(x1 - x0, z1 - z0) / 2);
     for (let i = 1; i < n; i++) {
       const x = x0 + (x1 - x0) * i / n, z = z0 + (z1 - z0) * i / n;
@@ -150,6 +169,7 @@
     const sprint = input.sprint && p.stam > 1 && len > 0;
     if (sprint) { speed = 7.4; p.stam = Math.max(0, p.stam - 14 * dt); }
     if (G.combat.blocking) speed *= 0.5;
+    SC.moving = len > 0; SC.speed = speed;
     if (len > 0) {
       const vx = fx / len * speed * dt, vz = fz / len * speed * dt;
       const [x, z] = SC.collide(p.x + vx, p.z + vz, PR, p.x, p.z);
@@ -176,9 +196,9 @@
     if (s.kind === 'overworld') {
       for (const d of W.dungeons) if (!p.discovered[d.id] && Math.hypot(d.x - p.x, d.z - p.z) < 45) { p.discovered[d.id] = 1; G.ui.toast('Discovered: ' + d.name); }
     } else {
-      const C = D.CELL, L = s.L;
+      const C = s.L.cell, L = s.L;
       SC.seen = SC.seen || {};
-      const key = s.dungeonId;
+      const key = s.levelId;
       const set = (SC.seen[key] = SC.seen[key] || new Set());
       const cx = Math.floor(p.x / C), cz = Math.floor(p.z / C);
       for (let j = -3; j <= 3; j++) for (let i = -3; i <= 3; i++) if (L.at(cx + i, cz + j) || L.at(cx + i, cz + j) === 0) set.add((cz + j) * L.w + cx + i);
@@ -209,7 +229,7 @@
     s.parts = s.parts.filter((q) => q.life > 0);
   };
   SC.npcAI = function (e, dt) {
-    if (e.talking) { e.frame = 0; return; }
+    if (e.talking) { e.frame = 0; const p = G.S.p; e.fy = Math.atan2(p.x - e.x, -(p.z - e.z)); return; }
     const d = Math.hypot(e.tx - e.x, e.tz - e.z);
     if (d < 0.3 || e.wait > 0) {
       e.frame = 0;
@@ -235,6 +255,7 @@
     const slow = e.slow > 0 ? 0.45 : 1;
     if (e.slow > 0) e.slow -= dt;
     // attack in progress
+    if (e.atk > 0 || e.state === 'chase') e.fy = Math.atan2(dx, -dz);
     if (e.atk > 0) {
       e.atk -= dt;
       e.frame = 3;
@@ -272,7 +293,7 @@
     // idle wandering
     if (Math.hypot(e.tx - e.x, e.tz - e.z) < 0.4 || e.t > 6) {
       e.t = Math.random() * 2;
-      const a = Math.random() * Math.PI * 2, r = Math.random() * (G.scene.kind === 'dungeon' ? 3 : 8);
+      const a = Math.random() * Math.PI * 2, r = Math.random() * (G.scene.grid ? 3 : 8);
       e.tx = e.hx + Math.cos(a) * r; e.tz = e.hz + Math.sin(a) * r;
     }
     const wd = Math.hypot(e.tx - e.x, e.tz - e.z);
@@ -282,7 +303,7 @@
   SC.chaseStep = function (e, tx, tz, step) {
     const s = G.scene;
     let gx = tx, gz = tz;
-    if (s.kind === 'dungeon' && !D.los(s.L, e.x, e.z, tx, tz)) {
+    if (s.grid && !D.los(s.L, e.x, e.z, tx, tz)) {
       e.path -= step;
       if (!e.next || e.path <= 0) { e.next = D.nextStep(s.L, e.x, e.z, tx, tz); e.path = 1.5; }
       if (e.next) { gx = e.next.x; gz = e.next.z; if (Math.hypot(gx - e.x, gz - e.z) < 0.4) e.next = null; }

@@ -143,6 +143,9 @@
   tex.bars = () => { const p = Pix(32, 32); for (let x = 2; x < 32; x += 8) p.rect(x, 0, 3, 32, '#2a2a2e'); p.rect(0, 4, 32, 3, '#2a2a2e'); p.rect(0, 26, 32, 3, '#2a2a2e'); return p; };
   tex.lava = () => noiseFill(Pix(32, 32), ['#5a1206', '#8a2a08', '#c0500c', '#e88a20'], 39, 4, 1.3);
   tex.sarc = () => { const p = bricks('#4a4642', '#1c1a18', 40, 0.1); p.rect(0, 0, 32, 4, '#5a5652'); return p; };
+  tex.books = () => { const p = Pix(32, 32); p.rect(0, 0, 32, 32, '#2a1a10'); const cols = ['#6a1a1a', '#1a3a5a', '#2a4a1a', '#5a4a1a', '#3a1a4a', '#4a2a1a']; for (let r = 0; r < 4; r++) { p.rect(0, r * 8 + 7, 32, 1, '#1a0e08'); let x = 1; while (x < 31) { const w = 2 + Math.floor(G.hash2(x, r, 60) * 3), h = 4 + Math.floor(G.hash2(r, x, 61) * 3); p.rect(x, r * 8 + 7 - h, w, h, cols[Math.floor(G.hash2(x, r, 62) * 6)]); x += w + (G.hash2(x, r, 63) < 0.15 ? 2 : 0); } } return p; };
+  tex.blanket = () => { const p = noiseFill(Pix(32, 32), ['#4a1a1a', '#5a2020', '#6a2828'], 64, 4); for (let y = 0; y < 32; y += 8) p.rect(0, y, 32, 2, '#c8b890'); return p; };
+  tex.hearth = () => { const p = bricks('#4a3a30', '#1a120e', 65, 0); p.rect(8, 14, 16, 18, '#0a0604'); return p; };
   tex.gold = () => noiseFill(Pix(32, 32), ['#5a4410', '#7a5c18', '#9a7820', '#c09a30'], 41, 4);
 
   // =====================================================================
@@ -224,11 +227,13 @@
   spr.exit = () => { const p = Pix(24, 30); p.rect(0, 0, 24, 30, '#0a0806'); for (let i = 0; i < 6; i++) p.rect(2 + i, 24 - i * 4, 20 - i * 2, 3, sh('#4a4640', 0.6 + i * 0.1)); p.ell(12, 2, 10, 4, '#d8c890'); return p; };
   spr.marker = (col) => { const p = Pix(8, 18); p.rect(2, 1, 4, 11, col); p.rect(2, 14, 4, 4, col); p.rect(3, 1, 1, 10, sh(col, 1.3)); return p.outline('#000000'); };
   spr.bolt = (col) => { const p = Pix(12, 12); p.ell(6, 6, 5, 5, sh(col, 0.7)); p.ell(6, 6, 3.5, 3.5, col); p.ell(6, 6, 1.8, 1.8, '#fff8e0'); return p; };
+  spr.arrow = () => { const p = Pix(16, 4); p.rect(0, 1, 12, 1, '#8a6a3a'); p.rect(12, 0, 3, 3, '#a0a0a8'); p.rect(0, 0, 3, 1, '#e0e0e0'); p.rect(0, 2, 3, 1, '#e0e0e0'); return p; };
+  spr.door_ext = () => { const p = Pix(8, 8); p.rect(0, 0, 8, 8, '#000'); return p; };
   spr.spark = () => { const p = Pix(4, 4); p.rect(1, 1, 2, 2, '#ffd060'); return p; };
   spr.blood = () => { const p = Pix(4, 4); p.rect(1, 1, 2, 2, '#8a1010'); return p; };
 
   // ---------- humanoids (32x48, frames: 0 idle 1 walk 2 walk 3 attack 4 dead) ----------
-  T.human = function (s, frame) {
+  T.human = function (s, frame, back) {
     const big = s.big ? 1 : 0;
     const W = big ? 48 : 32, H = big ? 72 : 48;
     const p = Pix(W, H);
@@ -265,10 +270,11 @@
     P(10, 16, 3, 15, T.sh(tc, 1.2)); P(19, 16, 3, 15, T.sh(tc, 0.75));
     if (armor === 'chain') for (let y = 17; y < 30; y += 2) for (let x = 11; x < 21; x += 2) P(x + (y % 4 ? 1 : 0), y, 1, 1, '#7a7e82');
     if (armor === 'plate') { P(12, 18, 8, 1, T.sh(tc, 1.4)); P(15, 17, 2, 12, T.sh(tc, 1.15)); }
-    if (s.trim) { P(15, 16, 2, 14, s.trim); }
+    if (s.trim && !back) { P(15, 16, 2, 14, s.trim); }
     if (s.undead === 'skel') { P(10, 16, 12, 15, '#00000000'); for (let y = 17; y < 27; y += 2) P(11, y, 10, 1, '#d8d0b8'); P(15, 16, 2, 14, '#c8c0a8'); P(12, 27, 8, 3, '#c8c0a8'); }
-    P(10, 29, 12, 2, s.belt || '#2a1e14'); P(15, 29, 2, 2, '#a08040');
-    if (s.cape) P(8, 16, 2, 22, s.cape), P(22, 16, 2, 22, T.sh(s.cape, 0.7));
+    P(10, 29, 12, 2, s.belt || '#2a1e14'); if (!back) P(15, 29, 2, 2, '#a08040');
+    if (s.cape && !back) P(8, 16, 2, 22, s.cape), P(22, 16, 2, 22, T.sh(s.cape, 0.7));
+    if (s.cape && back) { P(9, 16, 14, 24, s.cape); P(9, 16, 3, 24, T.sh(s.cape, 1.2)); P(20, 16, 3, 24, T.sh(s.cape, 0.75)); }
     // arms
     const armC = s.undead === 'skel' ? '#d0c8b0' : armor ? tc : top;
     const lArmY = 17 - (walk < 0 ? 1 : 0), rArmY = 17 - (walk > 0 ? 1 : 0);
@@ -285,6 +291,20 @@
     if (s.weapon === 'club') { if (atk) P(22, 0, 4, 10, '#5a4028'); else P(22, hy, 4, 11, '#5a4028'); }
     if (s.weapon === 'staff') { P(24, atk ? 0 : 6, 1, atk ? 14 : 36, '#4a3220'); P(23, atk ? -1 : 4, 3, 3, s.orb || '#e05010'); }
     if (s.weapon === 'spear') { P(24, atk ? 0 : 4, 1, 34, '#4a3220'); P(23, atk ? -2 : 2, 3, 3, wc); }
+    if (s.weapon === 'bow') { for (let y = 0; y < 20; y++) { const bx = 24 + Math.round(Math.sin(y / 19 * Math.PI) * 3); P(bx, (atk ? 4 : rArmY + 1) + y - 6, 1, 1, '#5a3a1e'); } P(24, (atk ? 4 : rArmY + 1) - 6, 1, 20, '#c8c0a8'); }
+    if (back) {
+      const headB = s.undead === 'skel' ? '#c8c0a8' : (s.hair && s.hairStyle !== 0 ? s.hair : T.sh(skin, 0.8));
+      P(12, 5, 8, 10, headB); P(12, 5, 2, 10, T.sh(headB, 1.1));
+      if (s.hairStyle === 2 && s.hair) P(11, 7, 10, 10, s.hair);
+      const hat = s.hat;
+      if (hat === 'helm' || hat === 'greathelm') { const hc = s.helmColor || '#5a5e64'; P(11, 3, 10, hat === 'greathelm' ? 11 : 7, hc); P(11, 3, 10, 1, T.sh(hc, 1.3)); }
+      else if (hat === 'hood') { const hc = s.hoodColor || top; P(10, 3, 12, 13, hc); P(10, 3, 2, 13, T.sh(hc, 1.15)); }
+      else if (hat === 'crown') { P(11, 1, 10, 3, '#c09030'); P(12, 0, 1, 1, '#c09030'); P(15, 0, 2, 1, '#c09030'); P(19, 0, 1, 1, '#c09030'); }
+      else if (hat === 'wizard') { const hc = s.hoodColor || '#2a2a4a'; P(9, 5, 14, 2, hc); P(11, 0, 10, 5, hc); P(14, -4, 4, 4, hc); }
+      else if (hat === 'cap') P(11, 3, 10, 4, s.hoodColor || '#5a3a2a');
+      if (s.horns) { P(9, 1, 2, 5, '#d8d0b8'); P(21, 1, 2, 5, '#d8d0b8'); }
+      return p.outline().flipX();
+    }
     // head
     const headC = s.undead === 'skel' ? '#d8d0b8' : skin;
     P(12, 5, 8, 10, headC); P(12, 5, 2, 10, T.sh(headC, 1.15)); P(18, 5, 2, 10, T.sh(headC, 0.8));
@@ -308,6 +328,70 @@
     }
     if (s.horns) { P(9, 1, 2, 5, '#d8d0b8'); P(21, 1, 2, 5, '#d8d0b8'); }
     if (s.glow) { P(13, 9, 2, 2, s.glow); P(17, 9, 2, 2, s.glow); }
+    return p.outline();
+  };
+
+  // profile view, facing right (frames 0-3)
+  T.humanSide = function (s, frame) {
+    const big = s.big ? 1 : 0;
+    const W = big ? 48 : 32, H = big ? 72 : 48, S = big ? 1.5 : 1;
+    const p = Pix(W, H);
+    const P = (x, y, w, h, c) => p.rect(Math.round(x * S), Math.round(y * S), Math.max(1, Math.round(w * S)), Math.max(1, Math.round(h * S)), c);
+    const skin = s.skin || '#b08868', top = s.top || '#5a4a3a', legs = s.legs || '#3a3028', boots = s.boots || '#2a1e14';
+    const armor = s.armor;
+    const tc = armor === 'plate' ? (s.armorColor || '#6a6e74') : armor === 'chain' ? '#5a5e62' : armor === 'leather' ? (s.armorColor || '#4a3420') : top;
+    const skel = s.undead === 'skel';
+    const bone = '#d8d0b8';
+    const armC = skel ? '#d0c8b0' : armor ? tc : top;
+    const walk = frame === 1 ? 1 : frame === 2 ? -1 : 0, atk = frame === 3;
+    if (s.cape) P(10, 16, 3, 24, T.sh(s.cape, 0.75));
+    if (!s.robe && !s.wraith) {
+      const lc = skel ? bone : legs;
+      P(14 - walk * 2, 30, 3, 12, T.sh(lc, 0.75)); P(14 - walk * 2, 41, 5, 5, boots);
+      P(15 + walk * 2, 30, 3, 12, lc); P(15 + walk * 2, 41, 5, 5, boots);
+    } else {
+      const robe = s.robeColor || top;
+      for (let y = 26; y < (s.wraith ? 42 : 46); y++) { const w = 4 + (y - 26) * 0.22; P(16 - w, y, w * 2, 1, T.sh(robe, y % 5 === 0 ? 0.85 : 1)); }
+      if (s.wraith) for (let x = 11; x < 21; x += 2) P(x, 42, 1, 2 + ((x + frame) % 3), T.sh(s.robeColor || top, 0.7));
+      else P(16, 45, 5, 2, boots);
+    }
+    P(12, 16, 8, 15, skel ? '#00000000' : tc); P(12, 16, 2, 15, skel ? '#00000000' : T.sh(tc, 0.75));
+    if (skel) { for (let y = 17; y < 27; y += 2) P(13, y, 6, 1, bone); P(13, 16, 2, 14, '#c8c0a8'); }
+    if (armor === 'chain' && !skel) for (let y = 17; y < 30; y += 2) for (let x = 13; x < 20; x += 2) P(x + (y % 4 ? 1 : 0), y, 1, 1, '#7a7e82');
+    P(12, 29, 8, 2, s.belt || '#2a1e14');
+    // arm & weapon
+    const wc = s.weaponColor || '#9a9ea4';
+    if (atk) {
+      P(16, 17, 9, 3, armC); P(25, 17, 2, 3, skel ? bone : skin);
+      if (s.weapon === 'sword' || s.weapon === 'spear') P(27, 18, s.weapon === 'spear' ? 5 : 5, 1, wc);
+      if (s.weapon === 'axe' || s.weapon === 'club') { P(26, 12, 1, 8, '#4a3220'); P(26, 11, 4, 4, s.weapon === 'club' ? '#5a4028' : wc); }
+      if (s.weapon === 'dagger') P(27, 18, 3, 1, wc);
+      if (s.weapon === 'staff') { P(26, 6, 1, 20, '#4a3220'); P(25, 4, 3, 3, s.orb || '#e05010'); }
+      if (s.weapon === 'bow') { for (let y = 0; y < 20; y++) P(27 + Math.round(Math.sin(y / 19 * Math.PI) * 2), 9 + y, 1, 1, '#5a3a1e'); P(22, 18, 5, 1, '#c8c0a8'); }
+    } else {
+      const hx = 16 + walk * 2;
+      P(hx, 17, 3, 11, armC); P(hx, 28, 3, 2, skel ? bone : skin);
+      if (s.weapon === 'sword') { P(hx + 1, 29, 1, 2, '#4a3a20'); P(hx + 1, 31, 1, 9, wc); }
+      if (s.weapon === 'axe') { P(hx + 1, 26, 1, 10, '#4a3220'); P(hx + 2, 32, 3, 4, wc); }
+      if (s.weapon === 'dagger') P(hx + 1, 30, 1, 4, wc);
+      if (s.weapon === 'club') P(hx, 28, 3, 10, '#5a4028');
+      if (s.weapon === 'staff') { P(hx + 1, 6, 1, 38, '#4a3220'); P(hx, 4, 3, 3, s.orb || '#e05010'); }
+      if (s.weapon === 'spear') { P(hx + 1, 4, 1, 36, '#4a3220'); P(hx, 2, 3, 3, wc); }
+      if (s.weapon === 'bow') for (let y = 0; y < 20; y++) P(hx + 3 + Math.round(Math.sin(y / 19 * Math.PI) * 2), 14 + y, 1, 1, '#5a3a1e');
+    }
+    // head in profile
+    const hc = skel ? bone : skin;
+    P(13, 5, 8, 10, hc); P(13, 5, 2, 10, T.sh(hc, 0.85)); P(21, 9, 1, 2, T.sh(hc, 0.85));
+    P(19, 9, 1, 1, s.undead ? (s.eyes || '#e04020') : '#1a1410');
+    if (s.beard) P(16, 12, 5, 4, s.beard);
+    const hat = s.hat;
+    if (hat === 'helm' || hat === 'greathelm') { const k = s.helmColor || '#5a5e64'; P(12, 3, 10, hat === 'greathelm' ? 10 : 6, k); P(12, 3, 10, 1, T.sh(k, 1.3)); if (hat === 'greathelm') P(19, 9, 3, 1, s.undead ? (s.eyes || '#e04020') : '#08080a'); }
+    else if (hat === 'hood') { const k = s.hoodColor || top; P(12, 3, 8, 5, k); P(11, 4, 5, 12, k); }
+    else if (hat === 'crown') { if (s.hair) P(12, 3, 8, 4, s.hair); P(12, 1, 9, 3, '#c09030'); P(13, 0, 1, 1, '#c09030'); P(17, 0, 1, 1, '#c09030'); }
+    else if (hat === 'wizard') { const k = s.hoodColor || '#2a2a4a'; P(10, 5, 14, 2, k); P(12, 0, 9, 5, k); P(13, -4, 4, 4, k); }
+    else if (hat === 'cap') P(12, 3, 10, 3, s.hoodColor || '#5a3a2a');
+    else if (s.hair && s.hairStyle !== 0) { P(12, 3, 9, 4, s.hair); P(12, 3, 3, s.hairStyle === 2 ? 14 : 8, s.hair); }
+    if (s.horns) P(14, 1, 2, 5, '#d8d0b8');
     return p.outline();
   };
   // quadrupeds & monsters (side view, facing right)
@@ -377,13 +461,19 @@
     T.add('ore', spr.ore()); T.add('sack', spr.sack()); T.add('exit', spr.exit());
     T.add('mark_grey', spr.marker('#a8a8a8')); T.add('mark_yellow', spr.marker('#f0d020')); T.add('mark_green', spr.marker('#40e040'));
     T.add('bolt_fire', spr.bolt('#f07020')); T.add('bolt_frost', spr.bolt('#60c0ff')); T.add('bolt_dark', spr.bolt('#a040e0')); T.add('bolt_green', spr.bolt('#60e040'));
-    T.add('spark', spr.spark()); T.add('blood', spr.blood());
+    T.add('spark', spr.spark()); T.add('arrow_spr', spr.arrow()); T.add('blood', spr.blood());
     // creatures and people
     for (const key in npcSpecs) {
       const s = npcSpecs[key];
       for (let f = 0; f < 5; f++) {
         const p = s.beast ? T.beast(s.beast, f, s) : T.human(s, f);
         T.add(key + '_' + f, p);
+        const hum = !s.beast || s.beast === 'wraith';
+        if (hum && f < 4) {
+          const s2 = s.beast === 'wraith' ? Object.assign({ wraith: true, robe: true, robeColor: '#1a1820', top: '#1a1820', hat: 'hood', hoodColor: '#141218', skin: '#0a0a0e', undead: 'wraith', eyes: '#80e0ff' }, s) : s;
+          T.add(key + '_b' + f, T.human(s2, f, true));
+          T.add(key + '_s' + f, T.humanSide(s2, f));
+        }
       }
     }
     return T.atlas;

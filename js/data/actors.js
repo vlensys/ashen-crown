@@ -22,12 +22,14 @@
   // people
   const H = (o) => Object.assign({ skin: '#a88060', hair: '#3a2a1e', hairStyle: 1 }, o);
   cr('bandit', { name: 'Bandit', lvl: 2, hp: 45, dmg: [4, 8], speed: 3.4, xp: 25, family: 'bandit', gold: true }, H({ armor: 'leather', armorColor: '#3a2a1c', legs: '#2a2420', hat: 'hood', hoodColor: '#2e2a26', weapon: 'dagger' }));
+  cr('bandit_archer', { name: 'Bandit Archer', lvl: 3, hp: 38, dmg: [3, 6], speed: 3.3, xp: 30, family: 'bandit', gold: true, ranged: { proj: 'arrow_spr', dmg: [6, 10], range: 24, cd: 2.2, phys: true } }, H({ armor: 'leather', armorColor: '#2a3a24', legs: '#2a2420', hat: 'hood', hoodColor: '#24301e', weapon: 'bow' }));
   cr('bandit_brute', { name: 'Bandit Brute', lvl: 5, hp: 85, dmg: [8, 13], speed: 3.1, atk: 1.3, xp: 50, armor: 6, family: 'bandit', gold: true }, H({ armor: 'chain', legs: '#2a2420', hat: 'helm', weapon: 'axe', beard: '#3a2a1e' }));
   cr('bandit_chief', { name: 'Red Hand Chieftain', lvl: 7, hp: 280, dmg: [12, 18], speed: 3.4, atk: 1.1, xp: 300, armor: 10, boss: true, family: 'bandit', gold: true }, H({ armor: 'plate', armorColor: '#5a2420', cape: '#6a1616', hat: 'helm', weapon: 'sword', shield: '#4a1a1a' }));
   cr('cultist', { name: 'Cinder Cultist', lvl: 4, hp: 45, dmg: [3, 6], speed: 3, xp: 35, ranged: { proj: 'bolt_fire', dmg: [7, 11], range: 18, cd: 2.6, color: [1, 0.5, 0.15] }, family: 'cult', gold: true }, H({ robe: true, robeColor: '#5a1410', top: '#5a1410', hat: 'hood', hoodColor: '#3a0c08', weapon: 'staff', orb: '#f07020' }));
   cr('cult_zealot', { name: 'Zealot Brannoc', lvl: 5, hp: 170, dmg: [8, 13], speed: 3.2, xp: 200, boss: true, ranged: { proj: 'bolt_fire', dmg: [9, 14], range: 18, cd: 3 }, family: 'cult', gold: true, armor: 4 }, H({ robe: true, robeColor: '#7a1a10', top: '#7a1a10', hat: 'hood', hoodColor: '#1a0806', weapon: 'staff', orb: '#ffb020', cape: '#2a0a06' }));
   cr('cult_lieutenant', { name: 'Ashwife Seraphine', lvl: 11, hp: 420, dmg: [14, 20], speed: 3.3, xp: 650, boss: true, ranged: { proj: 'bolt_dark', dmg: [16, 24], range: 20, cd: 2.2, color: [0.6, 0.2, 0.9] }, family: 'cult', gold: true, armor: 10 }, H({ armor: 'plate', armorColor: '#2a2028', cape: '#5a1410', hat: 'crown', hair: '#d8d8d8', hairStyle: 2, weapon: 'staff', orb: '#a040e0', skin: '#c0a090' }));
   cr('skeleton', { name: 'Skeleton', lvl: 3, hp: 38, dmg: [4, 8], speed: 2.9, xp: 25, undead: true, loot: [['bone_dust', 0.5]], family: 'undead' }, { undead: 'skel', skin: '#d8d0b8', legs: '#00000000', weapon: 'sword', weaponColor: '#7a6a5a', shield: '#4a3a2a' });
+  cr('skeleton_archer', { name: 'Skeleton Archer', lvl: 4, hp: 34, dmg: [3, 6], speed: 2.9, xp: 32, undead: true, ranged: { proj: 'arrow_spr', dmg: [7, 11], range: 22, cd: 2.4, phys: true }, loot: [['bone_dust', 0.5], ['arrows', 0.4]], family: 'undead' }, { undead: 'skel', skin: '#d8d0b8', legs: '#00000000', weapon: 'bow' });
   cr('bone_mage', { name: 'Bone Mage', lvl: 6, hp: 50, dmg: [4, 7], speed: 2.8, xp: 50, undead: true, ranged: { proj: 'bolt_green', dmg: [9, 14], range: 18, cd: 2.4, color: [0.4, 0.9, 0.3] }, loot: [['bone_dust', 0.8]], family: 'undead' }, { undead: 'skel', skin: '#d8d0b8', robe: true, robeColor: '#1e2a1a', top: '#1e2a1a', hat: 'hood', hoodColor: '#141e12', weapon: 'staff', orb: '#60e040', eyes: '#60e040' });
   cr('hollowed', { name: 'Hollowed', lvl: 6, hp: 80, dmg: [9, 14], speed: 2.9, atk: 1.3, xp: 55, undead: true, armor: 5, family: 'undead' }, { undead: 'draugr', skin: '#6a7478', top: '#2a2826', legs: '#22201e', hat: 'helm', helmColor: '#4a3e32', weapon: 'axe', weaponColor: '#5a5048', eyes: '#60c0ff', beard: '#3a3e40' });
   cr('barrow_lord', { name: 'The Barrow Lord', lvl: 9, hp: 360, dmg: [14, 22], speed: 3, atk: 1.3, xp: 420, undead: true, armor: 12, boss: true, family: 'undead' }, { undead: 'draugr', skin: '#5a646a', armor: 'plate', armorColor: '#3a3632', cape: '#2a3a3a', hat: 'crown', weapon: 'sword', weaponColor: '#8ac0d0', eyes: '#60c0ff', beard: '#6a7478' });
@@ -40,8 +42,8 @@
   // which creatures appear where
   G.THEMES = {
     cave: { normal: ['spider', 'spider', 'wolf', 'dire_wolf', 'troll', 'rat', 'bandit'], boss: ['broodmother', 'troll_king'] },
-    fort: { normal: ['bandit', 'bandit', 'bandit_brute', 'cultist', 'bandit_brute'], boss: ['bandit_chief', 'cult_lieutenant'] },
-    crypt: { normal: ['skeleton', 'skeleton', 'bone_mage', 'hollowed', 'wraith', 'rat'], boss: ['barrow_lord', 'drowned_knight'] },
+    fort: { normal: ['bandit', 'bandit', 'bandit_brute', 'cultist', 'bandit_brute', 'bandit_archer'], boss: ['bandit_chief', 'cult_lieutenant'] },
+    crypt: { normal: ['skeleton', 'skeleton', 'skeleton_archer', 'bone_mage', 'hollowed', 'wraith', 'rat'], boss: ['barrow_lord', 'drowned_knight'] },
     spire: { normal: ['ashen_knight', 'wraith', 'hollowed', 'bone_mage', 'cultist'], boss: ['ashen_king'] },
   };
   G.scaleCreature = function (def, level) {

@@ -180,7 +180,7 @@
       const a = r() * Math.PI * 2, i = Math.round(ri + Math.cos(a) * 6), j = Math.round(rj + Math.sin(a) * 6);
       if (nearTown(i, j, 16) || W.hAt(i, j) < 1 || W.road[j * N + i] || W.spawns.some((s) => Math.hypot(s.i - i, s.j - j) < 20)) continue;
       const lvl = G.clamp(Math.round(1 + Math.hypot(i - hb.x, j - hb.z) / 18), 1, 10);
-      W.spawns.push({ id: 's' + W.spawns.length, i, j, camp: true, list: lvl > 4 ? ['bandit', 'bandit', 'bandit_brute'] : ['bandit', 'bandit'], lvl });
+      W.spawns.push({ id: 's' + W.spawns.length, i, j, camp: true, list: lvl > 4 ? ['bandit', 'bandit_archer', 'bandit_brute'] : lvl > 2 ? ['bandit', 'bandit_archer'] : ['bandit', 'bandit'], lvl });
       n++;
     }
     const den = (count, list, filter, extra) => {

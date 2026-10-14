@@ -19,7 +19,7 @@
     const th = THEME[kind];
     const w = kind === 'cave' ? 46 : kind === 'spire' ? 40 : 44, h = w;
     const grid = new Uint8Array(w * h);
-    const L = { site, kind, th, w, h, grid, rooms: [], props: [], lights: [], chests: [], spawns: [], ores: [], solids: [] };
+    const L = { site, kind, th, w, h, grid, cell: C, rooms: [], props: [], lights: [], chests: [], spawns: [], ores: [], solids: [] };
     const at = (x, y) => (x < 0 || y < 0 || x >= w || y >= h ? 0 : grid[y * w + x]);
     L.at = at;
     if (kind === 'cave') {
@@ -152,6 +152,7 @@
 
   // ---------- meshes ----------
   D.buildMeshes = function (L) {
+    const C = L.cell, U = C / 2;
     const B = new G.gfx.Builder();
     const R = (n) => G.tex.r(n);
     const th = L.th, H = th.h, a = th.amb;
@@ -166,27 +167,28 @@
       const occ = (dx, dy) => 1 - 0.18 * (!at(x + dx, y) + !at(x, y + dy) + !at(x + dx, y + dy));
       const fc = [amb(occ(-1, -1)), amb(occ(1, -1)), amb(occ(1, 1)), amb(occ(-1, 1))];
       const ft = L.kind !== 'cave' && th.floor2 && !roomOf(x, y) ? floor2 : floorT;
-      B.quad([[x0, 0, z0], [x1, 0, z0], [x1, 0, z1], [x0, 0, z1]], ft, [[0, 0], [1.5, 0], [1.5, 1.5], [0, 1.5]], fc, 1);
+      B.quad([[x0, 0, z0], [x1, 0, z0], [x1, 0, z1], [x0, 0, z1]], ft, [[0, 0], [U, 0], [U, U], [0, U]], fc, 1);
       const ch = L.kind === 'cave' ? H + (G.hash2(x, y, 5) - 0.5) * 0.8 : H;
-      B.quad([[x0, ch, z0], [x1, ch, z0], [x1, ch, z1], [x0, ch, z1]], ceilT, [[0, 0], [1.5, 0], [1.5, 1.5], [0, 1.5]], amb(0.7), 1);
+      B.quad([[x0, ch, z0], [x1, ch, z0], [x1, ch, z1], [x0, ch, z1]], ceilT, [[0, 0], [U, 0], [U, U], [0, U]], amb(0.7), 1);
       const wv = H / 2;
       const top = [amb(0.75), amb(0.75), amb(1.05), amb(1.05)];
-      if (!at(x, y - 1)) B.quad([[x0, 0, z0], [x1, 0, z0], [x1, H, z0], [x0, H, z0]], wallT, [[0, wv], [1.5, wv], [1.5, 0], [0, 0]], top.map((c, i) => c.map((v) => v * 0.95)), 1);
-      if (!at(x, y + 1)) B.quad([[x1, 0, z1], [x0, 0, z1], [x0, H, z1], [x1, H, z1]], wallT, [[0, wv], [1.5, wv], [1.5, 0], [0, 0]], top, 1);
-      if (!at(x - 1, y)) B.quad([[x0, 0, z1], [x0, 0, z0], [x0, H, z0], [x0, H, z1]], wallT, [[0, wv], [1.5, wv], [1.5, 0], [0, 0]], top.map((c) => c.map((v) => v * 0.85)), 1);
-      if (!at(x + 1, y)) B.quad([[x1, 0, z0], [x1, 0, z1], [x1, H, z1], [x1, H, z0]], wallT, [[0, wv], [1.5, wv], [1.5, 0], [0, 0]], top.map((c) => c.map((v) => v * 0.9)), 1);
+      if (!at(x, y - 1)) B.quad([[x0, 0, z0], [x1, 0, z0], [x1, H, z0], [x0, H, z0]], wallT, [[0, wv], [U, wv], [U, 0], [0, 0]], top.map((c, i) => c.map((v) => v * 0.95)), 1);
+      if (!at(x, y + 1)) B.quad([[x1, 0, z1], [x0, 0, z1], [x0, H, z1], [x1, H, z1]], wallT, [[0, wv], [U, wv], [U, 0], [0, 0]], top, 1);
+      if (!at(x - 1, y)) B.quad([[x0, 0, z1], [x0, 0, z0], [x0, H, z0], [x0, H, z1]], wallT, [[0, wv], [U, wv], [U, 0], [0, 0]], top.map((c) => c.map((v) => v * 0.85)), 1);
+      if (!at(x + 1, y)) B.quad([[x1, 0, z0], [x1, 0, z1], [x1, H, z1], [x1, H, z0]], wallT, [[0, wv], [U, wv], [U, 0], [0, 0]], top.map((c) => c.map((v) => v * 0.9)), 1);
     }
-    for (const b of L.boxes) B.box(b.x0, 0, b.z0, b.x1, b.y1, b.z1, { side: R(b.tex), top: R(b.tex === 'sarc' ? 'flagstone' : b.tex) }, amb(1.2), 1, 2);
+    for (const b of L.boxes) B.box(b.x0, 0, b.z0, b.x1, b.y1, b.z1, { side: R(b.tex), top: R(b.tex === 'sarc' || b.tex === 'hearth' ? 'flagstone' : b.tex === 'blanket' ? 'blanket' : b.tex) }, amb(1.2), 1, b.tile || 2);
     // exit stairs
     const e = L.exit;
     const ex = e.x - e.dx * 0.02, ez = e.z - e.dy * 0.02;
     const pdx = e.dy, pdz = e.dx;
-    B.quad([[ex - pdx * 1.2, 0, ez - pdz * 1.2], [ex + pdx * 1.2, 0, ez + pdz * 1.2], [ex + pdx * 1.2, 3, ez + pdz * 1.2], [ex - pdx * 1.2, 3, ez - pdz * 1.2]], R('exit'), [[0, 1], [1, 1], [1, 0], [0, 0]], [1, 1, 1], 2);
+    const ew = L.exitTex ? 0.85 : 1.2, eh = L.exitTex ? 2.6 : 3;
+    B.quad([[ex - pdx * ew, 0, ez - pdz * ew], [ex + pdx * ew, 0, ez + pdz * ew], [ex + pdx * ew, eh, ez + pdz * ew], [ex - pdx * ew, eh, ez - pdz * ew]], R(L.exitTex || 'exit'), [[0, 1], [1, 1], [1, 0], [0, 0]], L.exitTex ? amb(2.2) : [1, 1, 1], L.exitTex ? 1 : 2);
     for (const p of L.props) if (!p.anim) B.sprite(p.x, p.y || 0, p.z, p.w, p.h, R(p.kind), amb(1.4), p.glow ? 2 : 1);
     return [B.build()];
   };
   // grid collision helpers
-  D.solid = function (L, x, z) { return !L.at(Math.floor(x / C), Math.floor(z / C)); };
+  D.solid = function (L, x, z) { return !L.at(Math.floor(x / L.cell), Math.floor(z / L.cell)); };
   D.los = function (L, x0, z0, x1, z1) {
     const d = Math.hypot(x1 - x0, z1 - z0), n = Math.ceil(d / 0.6);
     for (let i = 1; i < n; i++) if (D.solid(L, x0 + (x1 - x0) * i / n, z0 + (z1 - z0) * i / n)) return false;
@@ -194,7 +196,7 @@
   };
   // BFS next step toward target on the grid
   D.nextStep = function (L, fx, fz, tx, tz) {
-    const w = L.w, s = Math.floor(fz / C) * w + Math.floor(fx / C), t = Math.floor(tz / C) * w + Math.floor(tx / C);
+    const C = L.cell, w = L.w, s = Math.floor(fz / C) * w + Math.floor(fx / C), t = Math.floor(tz / C) * w + Math.floor(tx / C);
     if (s === t) return null;
     const prev = new Map([[t, -1]]);
     const q = [t];

@@ -14,7 +14,7 @@ and it works offline. Everything, including the art and the sound, is generated 
 | Attack · block | Left click or F · hold right click or B |
 | Cast the readied spell · ready spell 1–5 | R · 1–5 |
 | Talk / open / loot / enter | E |
-| Quick heal | Q |
+| Quick heal · swap to previous weapon | Q · Z |
 | Inventory · Character · Journal · Map | I · C · J · M |
 | Lantern (at night) | L |
 | Pause, save, export/import a save code | Esc |
@@ -24,6 +24,8 @@ and it works offline. Everything, including the art and the sound, is generated 
 - **Towns:** three major walled towns (Ravenhold, Emberfall, Duskport) and four villages
   (Hollowbrook, Ashford, Mirefen, Thornwick), each with merchants, smiths, inns, temples,
   guards and townsfolk.
+- **Buildings you can enter:** every house has a furnished interior. Shopkeepers, innkeepers,
+  priests and the archivist work inside, and their quest marker shows above the door.
 - **Dungeons:** caves, forts and crypts are placed and generated from a random seed for every
   new game, along with surface ruins and bandit camps. Inside are monsters, a boss, chests, and
   in caves, iron veins. Each dungeon remembers what you looted and killed.
@@ -34,6 +36,11 @@ and it works offline. Everything, including the art and the sound, is generated 
   - A yellow **!** means you've started it and it isn't finished.
   - A green **!** means the objectives are done and your reward is waiting.
   - No marker means there's nothing to do, though you can still talk to them.
+- **Combat:** melee with blocking, bows and arrows (enemy archers too), and spells. People and
+  monsters are drawn from the front, back or side depending on which way they face.
+- **Sound:** all synthesized, with no audio files. Heavy hits, iron clangs, footsteps, wind,
+  dungeon rumble and drips, crackling hearths, and a slow minor-key music drone, all in a
+  stone-hall reverb.
 - **Other systems:** three classes, levelling with attribute points, five spells, tiered
   weapons and armour, shops, inns (rest until morning), a day/night cycle, fast travel between
   towns you've visited, a journal, and a world map with an automap inside dungeons.
@@ -57,4 +64,5 @@ js/ui/ui.js           HUD, compass, dialogue, menus, shops, looting, map, title 
 ```
 
 `index.html?demo` starts a throwaway character that is never saved. Add `&dungeon=cave|fort|crypt`
-to start inside a dungeon, or `&time=22` to start at night.
+to start inside a dungeon, `&ui=house&town=ravenhold&role=inn` to start inside a building, or
+`&time=22` to start at night.

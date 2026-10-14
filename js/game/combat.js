@@ -18,10 +18,11 @@
     const p = G.S.p;
     if (CB.swing || p.dead) return;
     const st = G.player.stats(), w = st.weapon;
+    if (w.wtype === 'bow' && !G.player.count('arrows')) { G.ui.toast('You have no arrows.'); return; }
     if (p.stam < w.stam * 0.5) { G.ui.toast('Too tired to swing!'); return; }
     p.stam = Math.max(0, p.stam - w.stam);
     CB.swing = { t: 0, dur: w.speed / st.haste, hit: false, w };
-    G.audio && G.audio.play('swing');
+    G.audio && G.audio.play(w.wtype === 'bow' ? 'draw' : 'swing');
   };
   CB.update = function (dt) {
     const p = G.S.p;
@@ -29,9 +30,21 @@
     if (!CB.swing) return;
     const s = CB.swing;
     s.t += dt;
-    if (!s.hit && s.t >= s.dur * 0.45) { s.hit = true; CB.meleeHit(s.w); }
+    if (!s.hit && s.t >= s.dur * (s.w.wtype === 'bow' ? 0.6 : 0.45)) { s.hit = true; if (s.w.wtype === 'bow') CB.shoot(s.w); else CB.meleeHit(s.w); }
     if (s.t >= s.dur) CB.swing = null;
     void p;
+  };
+  CB.shoot = function (w) {
+    const p = G.S.p, st = G.player.stats();
+    if (!G.player.count('arrows')) return;
+    G.player.take('arrows', 1);
+    const fx = Math.sin(p.yaw) * Math.cos(p.pitch), fy = Math.sin(p.pitch), fz = -Math.cos(p.yaw) * Math.cos(p.pitch);
+    let dmg = G.R.int(w.dmg[0], w.dmg[1]) * (1 + p.attr.finesse * 0.05);
+    const crit = G.R.chance(st.crit);
+    if (crit) dmg *= 1.8;
+    const sp = 40;
+    CB.projectile({ x: p.x + fx * 0.6, y: p.y + 1.45, z: p.z + fz * 0.6, vx: fx * sp, vy: fy * sp + 1, vz: fz * sp, dmg, crit, from: 'player', sprite: 'arrow_spr', grav: 6 });
+    G.audio && G.audio.play('bow');
   };
   CB.meleeHit = function (w) {
     const p = G.S.p, st = G.player.stats();
@@ -137,7 +150,9 @@
     const dx = p.x - e.x, dy = (p.y + 1.2) - (e.y + e.h * 0.6), dz = p.z - e.z, d = Math.hypot(dx, dy, dz) || 1;
     const sp = 15;
     const scale = G.scaleCreature(e.def, e.lvl).k;
-    CB.projectile({ x: e.x + dx / d * 0.6, y: e.y + e.h * 0.6, z: e.z + dz / d * 0.6, vx: dx / d * sp, vy: dy / d * sp, vz: dz / d * sp, dmg: G.R.int(rg.dmg[0], rg.dmg[1]) * scale, from: 'mob', src: e, sprite: rg.proj, color: rg.color || [1, 0.5, 0.2] });
+    const spd = rg.phys ? 30 : sp;
+    CB.projectile({ x: e.x + dx / d * 0.6, y: e.y + e.h * 0.6, z: e.z + dz / d * 0.6, vx: dx / d * spd, vy: dy / d * spd + (rg.phys ? d * 0.1 : 0), vz: dz / d * spd, dmg: G.R.int(rg.dmg[0], rg.dmg[1]) * scale, from: 'mob', src: e, sprite: rg.proj, color: rg.phys ? null : rg.color || [1, 0.5, 0.2], grav: rg.phys ? 6 : 0 });
+    if (rg.phys) G.audio && G.audio.play('bow');
   };
   CB.projectile = function (o) { o.life = 3; G.scene.projs.push(o); };
   CB.updateProjectiles = function (dt) {
@@ -146,23 +161,24 @@
       q.life -= dt;
       const steps = 3;
       for (let i = 0; i < steps && q.life > 0; i++) {
+        if (q.grav) q.vy -= q.grav * dt / steps;
         q.x += q.vx * dt / steps; q.y += q.vy * dt / steps; q.z += q.vz * dt / steps;
         const g = SC().groundAt(q.x, q.z);
-        const wall = s.kind === 'dungeon' ? (G.dungeon.solid(s.L, q.x, q.z) || q.y > s.L.th.h) : G.world.collidersNear(q.x, q.z).some((c) => (c.r ? Math.hypot(q.x - c.x, q.z - c.z) < c.r : q.x > c.x0 && q.x < c.x1 && q.z > c.z0 && q.z < c.z1));
+        const wall = s.grid ? (G.dungeon.solid(s.L, q.x, q.z) || q.y > s.L.th.h) : G.world.collidersNear(q.x, q.z).some((c) => (c.r ? Math.hypot(q.x - c.x, q.z - c.z) < c.r : q.x > c.x0 && q.x < c.x1 && q.z > c.z0 && q.z < c.z1));
         if (q.y < g || wall) { q.life = 0; break; }
         if (q.from === 'player') {
           for (const e of s.ents) {
             if (e.kind !== 'mob' || e.dead) continue;
             if (Math.hypot(e.x - q.x, e.z - q.z) < e.w * 0.45 + 0.3 && q.y > e.y && q.y < e.y + e.h + 0.3) {
-              CB.damageMob(e, q.dmg, false);
+              CB.damageMob(e, q.dmg, !!q.crit);
               if (q.slow) e.slow = q.slow;
               if (q.drain) p.hp = Math.min(G.player.stats().hpMax, p.hp + q.dmg * q.drain);
               q.life = 0; break;
             }
           }
-        } else if (Math.hypot(p.x - q.x, p.z - q.z) < 0.6 && q.y > p.y && q.y < p.y + 1.9) { CB.hitPlayer(q.dmg, q.src, 'spell'); q.life = 0; }
+        } else if (Math.hypot(p.x - q.x, p.z - q.z) < 0.6 && q.y > p.y && q.y < p.y + 1.9) { CB.hitPlayer(q.dmg, q.src, q.grav ? 'arrow' : 'spell'); q.life = 0; }
       }
-      if (q.life <= 0) for (let i = 0; i < 8; i++) s.parts.push({ x: q.x, y: q.y, z: q.z, vx: (Math.random() - 0.5) * 4, vy: Math.random() * 3, vz: (Math.random() - 0.5) * 4, life: 0.4, sprite: 'spark' });
+      if (q.life <= 0 && q.color) for (let i = 0; i < 8; i++) s.parts.push({ x: q.x, y: q.y, z: q.z, vx: (Math.random() - 0.5) * 4, vy: Math.random() * 3, vz: (Math.random() - 0.5) * 4, life: 0.4, sprite: 'spark' });
     }
     s.projs = s.projs.filter((q) => q.life > 0);
   };

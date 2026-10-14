@@ -33,6 +33,12 @@
   add('ashbringer', { name: 'Ashbringer', type: 'weapon', wtype: 'greatsword', tier: 15, dmg: [32, 46], speed: 0.95, reach: 3.0, stam: 16, value: 5000, color: '#e07030', unique: true, twoHand: true, fire: 8 });
   add('kings_bane', { name: 'Kingsbane', type: 'weapon', wtype: 'sword', tier: 14, dmg: [24, 34], speed: 0.55, reach: 2.5, stam: 9, value: 4000, color: '#d0d8ff', unique: true, undead: 1.5 });
 
+  // ---------- bows ----------
+  [['hunting_bow', 'Hunting Bow', 1, [5, 9], 30, '#6a4a2a'], ['yew_longbow', 'Yew Longbow', 4, [8, 14], 110, '#5a3a1e'], ['recurve_bow', 'Steel Recurve', 8, [12, 19], 320, '#8a8e94'],
+    ['blackguard_bow', 'Blackguard Bow', 12, [17, 26], 800, '#3a3a44'], ['ebon_bow', 'Ebon Bow', 16, [23, 35], 2000, '#4a2a5a']].forEach(([id, name, tier, dmg, value, color]) =>
+    add(id, { name, type: 'weapon', wtype: 'bow', tier, dmg, speed: 0.85, reach: 2, stam: 5, value, color, twoHand: true }));
+  add('arrows', { name: 'Arrows', type: 'ammo', value: 1, color: '#8a6a3a' });
+
   // ---------- armour ----------
   const ARMOR_TIERS = [
     { k: 'leather', n: 'Leather', lvl: 1, a: 1, v: 1, c: '#5a3e24' },
@@ -125,7 +131,8 @@
       if (k < 0.3) out.push([r.pick(['potion_minor', 'potion_minor', 'potion_heal', 'potion_stamina', 'potion_mana', level > 8 ? 'potion_greater' : 'potion_heal']), 1]);
       else if (k < 0.45) out.push([r.pick(['bread', 'cheese', 'apple', 'ale', 'venison']), 1]);
       else if (k < 0.65) out.push([r.pick(['silver_ring', 'old_coin', 'candlestick', 'idol', level > 5 ? 'gold_chain' : 'old_coin', level > 9 ? r.pick(['ruby', 'sapphire']) : 'silver_ring']), 1]);
-      else if (k < 0.82) out.push([G.randomGear(level, r, 'weapon'), 1]);
+      else if (k < 0.74) out.push([G.randomGear(level, r, 'weapon'), 1]);
+      else if (k < 0.82) out.push(['arrows', r.int(6, 20)]);
       else if (k < 0.97) out.push([G.randomGear(level, r, 'armor'), 1]);
       else out.push([r.pick(['tome_firebolt', 'tome_frost', 'tome_ward', 'tome_heal', level > 10 ? 'tome_drain' : 'tome_frost']), 1]);
     }

@@ -11,6 +11,7 @@
   };
   V.env = function () {
     const s = G.scene, p = G.S.p;
+    if (s.kind === 'interior') { const th = s.L.th; return { fog: th.fog, top: th.fog, sky: th.amb.map((v) => v * 2.2 + 0.05), fogD: 0.02, far: 60 }; }
     if (s.kind === 'dungeon') {
       const th = s.L.th;
       return { fog: th.fog, top: th.fog, sky: th.amb.map((v) => v * 1.9 + 0.02), fogD: 0.034, far: 75 };
@@ -35,18 +36,18 @@
   V.lights = function (env) {
     const s = G.scene, p = G.S.p, t = performance.now() / 1000;
     const out = [];
-    const night = G.time.isNight() || s.kind === 'dungeon';
+    const night = G.time.isNight() || s.grid;
     if (s.kind === 'dungeon') out.push([p.x, p.y + 1.6, p.z, 13, 0.95, 0.78, 0.5]);
     else if (night && V.lantern) out.push([p.x, p.y + 1.6, p.z, 10, 0.75, 0.62, 0.42]);
     const cand = [];
     for (const l of s.lights) {
-      if (l.night && !night && s.kind !== 'dungeon') continue;
+      if (l.night && !night && !s.grid) continue;
       const d = Math.hypot(l.x - p.x, l.z - p.z);
       if (d > 60) continue;
       const f = l.flicker ? 0.9 + Math.sin(t * 11 + l.x) * 0.06 + Math.sin(t * 17 + l.z) * 0.04 : 1;
       cand.push([d, [l.x, l.y, l.z, l.r * f, l.c[0], l.c[1], l.c[2]]]);
     }
-    for (const q of s.projs) cand.push([Math.hypot(q.x - p.x, q.z - p.z) - 5, [q.x, q.y, q.z, 7, q.color[0], q.color[1], q.color[2]]]);
+    for (const q of s.projs) if (q.color) cand.push([Math.hypot(q.x - p.x, q.z - p.z) - 5, [q.x, q.y, q.z, 7, q.color[0], q.color[1], q.color[2]]]);
     cand.sort((a, b) => a[0] - b[0]);
     for (const c of cand) { if (out.length >= 8) break; out.push(c[1]); }
     return out;
@@ -59,8 +60,17 @@
     const near = (x, z, d) => Math.abs(x - p.x) < d && Math.abs(z - p.z) < d;
     for (const e of s.ents) {
       if (!near(e.x, e.z, 140)) continue;
-      const key = e.sprite + '_' + (e.frame || 0);
-      const flip = e.def && e.def.flip ? ((e.mvx || 0) * rx + (e.mvz || 0) * rz) < 0 : false;
+      const spec = G.SPR[e.sprite] || {};
+      const fr = e.frame || 0;
+      let key = e.sprite + '_' + fr, flip = false;
+      const camA = Math.atan2(cam.x - e.x, -(cam.z - e.z));
+      const fy = e.fy == null ? camA : e.fy;
+      const facingRight = Math.sin(fy) * rx - Math.cos(fy) * rz > 0;
+      if ((!spec.beast || spec.beast === 'wraith') && fr < 4) {
+        const rel = Math.abs(G.angDiff(fy, camA));
+        if (rel > 2.35) key = e.sprite + '_b' + fr;
+        else if (rel > 0.8) { key = e.sprite + '_s' + fr; flip = !facingRight; }
+      } else if (e.def && e.def.flip) flip = !facingRight;
       const bob = e.def && e.def.float ? Math.sin(e.t * 2) * 0.15 + 0.3 : 0;
       const mode = e.hurt > 0 ? 5 : 0;
       B.sprite(e.x, e.y + bob, e.z, e.dead && e.def ? e.w * 1.3 : e.w, e.h, R(key), [1, 1, 1], mode, flip);
@@ -75,13 +85,18 @@
       if (it.kind === 'plant') B.sprite(it.x, SC().groundAt(it.x, it.z), it.z, it.plant.kind === 'lotus' ? 0.8 : 0.7, it.plant.kind === 'lotus' ? 0.6 : 0.8, R(it.picked ? it.plant.kind + '_picked' : it.plant.kind), [1, 1, 1], 0);
       if (it.kind === 'sack') B.sprite(it.x, SC().groundAt(it.x, it.z), it.z, 0.7, 0.6, R('sack'), [1, 1, 1], 0);
     }
-    const anim = s.kind === 'dungeon' ? s.L.props : V.owAnim;
+    if (s.kind === 'overworld') for (const it of s.interact) {
+      if (it.kind !== 'house' || !it.building.inside || !near(it.x, it.z, 90)) continue;
+      const m = G.quests.marker(it.building.inside);
+      if (m) B.sprite(it.x, W.groundH(it.x, it.z) + 3 + Math.sin(t * 3) * 0.08, it.z, 0.4, 0.9, R('mark_' + m), [1, 1, 1], 2);
+    }
+    const anim = s.grid ? s.L.props : V.owAnim;
     for (const a of anim || []) {
       if (!a.anim || !near(a.x, a.z, 90)) continue;
       const f = Math.floor(t * 6 + a.x) % 2;
       B.sprite(a.x, (a.y || SC().groundAt(a.x, a.z)), a.z, a.w, a.h, R(a.anim + f), [1, 1, 1], 2);
     }
-    for (const q of s.projs) B.sprite(q.x, q.y - 0.25, q.z, 0.5, 0.5, R(q.sprite), [1, 1, 1], 2);
+    for (const q of s.projs) { if (q.sprite === 'arrow_spr') B.sprite(q.x, q.y - 0.1, q.z, 0.8, 0.2, R(q.sprite), [1, 1, 1], 0); else B.sprite(q.x, q.y - 0.25, q.z, 0.5, 0.5, R(q.sprite), [1, 1, 1], 2); }
     for (const q of s.parts) B.sprite(q.x, q.y, q.z, 0.12, 0.12, R(q.sprite), [1, 1, 1], q.sprite === 'spark' ? 2 : 0);
     return B.d;
   };
@@ -121,7 +136,7 @@
     let k = 0;
     if (sw) k = Math.sin(Math.min(1, sw.t / sw.dur) * Math.PI);
     const block = G.combat.blocking;
-    const night = G.scene.kind === 'dungeon' ? 0.55 : G.time.isNight() ? 0.5 : 1;
+    const night = G.scene.kind === 'dungeon' ? 0.55 : G.scene.kind === 'interior' ? 0.8 : G.time.isNight() ? 0.5 : 1;
     const shade = (hex, f) => { const c = G.tex.C(hex); f *= night; return 'rgb(' + Math.min(255, c[0] * f) + ',' + Math.min(255, c[1] * f) + ',' + Math.min(255, c[2] * f) + ')'; };
     // shield in the off hand
     if (p.equip.shield && !(wp.twoHand)) {
@@ -138,12 +153,26 @@
       g.fillStyle = 'rgba(' + c.map((v) => Math.round(v * 255)).join(',') + ',' + (G.ui.castT * 1.5).toFixed(2) + ')';
       g.beginPath(); g.arc(w * 0.3, h * 0.78, 30 * u, 0, Math.PI * 2); g.fill();
     }
+    if (wp.wtype === 'bow') {
+      const drawK = sw && sw.t < sw.dur * 0.6 ? Math.min(1, sw.t / (sw.dur * 0.6)) : 0;
+      const R = 72 * u, bx = w * 0.7 + bobX, by = h * 0.72 + bobY, cx0 = bx - R * 0.55;
+      const arc = (col, lw) => { g.lineWidth = lw; g.strokeStyle = col; g.beginPath(); g.arc(cx0, by, R, -0.95, 0.95); g.stroke(); };
+      arc('#0c0a08', Math.max(2, 5 * u)); arc(shade(wp.color || '#6a4a2a', 1), Math.max(1, 3 * u));
+      const tx = cx0 + Math.cos(0.95) * R, ty1 = by - Math.sin(0.95) * R, ty2 = by + Math.sin(0.95) * R;
+      const pull = drawK * 38 * u;
+      g.lineWidth = 1; g.strokeStyle = shade('#d8d0b8', 1);
+      g.beginPath(); g.moveTo(tx, ty1); g.lineTo(tx - 16 * u - pull, by); g.lineTo(tx, ty2); g.stroke();
+      if (G.player.count('arrows') && (!sw || sw.t < sw.dur * 0.6)) { g.fillStyle = shade('#8a6a3a', 1); g.fillRect(tx - 16 * u - pull, by - 1.2 * u, 80 * u, 2.4 * u); g.fillStyle = shade('#a0a0a8', 1); g.fillRect(tx + 60 * u - pull, by - 3 * u, 7 * u, 6 * u); }
+      g.fillStyle = '#0c0a08'; g.fillRect(tx - 9 * u, by - 9 * u, 18 * u, 18 * u);
+      g.fillStyle = shade('#a07858', 1); g.fillRect(tx - 7 * u, by - 7 * u, 14 * u, 14 * u);
+      return;
+    }
     // the weapon
     const px = w * 0.72 + bobX - k * 90 * u + (block ? -50 * u : 0), py = h * 0.95 + bobY - k * 30 * u - (block ? 25 * u : 0);
     g.save();
     g.translate(px, py);
     g.rotate(-0.55 - k * 1.1 + (block ? -0.6 : 0));
-    const L = { dagger: 55, sword: 95, axe: 90, mace: 85, greatsword: 130, staff: 150, fist: 0 }[wp.wtype] * u;
+    const L = { bow: 0, dagger: 55, sword: 95, axe: 90, mace: 85, greatsword: 130, staff: 150, fist: 0 }[wp.wtype] * u;
     const col = wp.color || '#9a9ea4';
     // hand
     g.fillStyle = '#0c0a08'; g.fillRect(-14 * u, -6 * u, 28 * u, 34 * u);
